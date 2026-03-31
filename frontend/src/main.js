@@ -32,13 +32,30 @@ async function fetchJSON(url) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (e) {
-    console.warn(`Failed to fetch ${url}:`, e);
     return null;
   }
 }
 
+/** Wait for backend to be ready, retrying with backoff */
+async function waitForBackend(maxRetries = 8) {
+  for (let i = 0; i < maxRetries; i++) {
+    const health = await fetchJSON('/api/health');
+    if (health && health.status === 'ok') return true;
+    const wait = Math.min(2000 * (i + 1), 10000);
+    showToast(`Esperando al backend... (intento ${i + 1})`, 'info');
+    await new Promise(r => setTimeout(r, wait));
+  }
+  return false;
+}
+
 async function loadData() {
-  showToast('Cargando datos...', 'info');
+  showToast('Conectando con el servidor...', 'info');
+
+  const ready = await waitForBackend();
+  if (!ready) {
+    showToast('No se pudo conectar al backend. Recarga la página.', 'error');
+    return;
+  }
 
   // Load events
   const events = await fetchJSON('/api/events');
@@ -46,14 +63,18 @@ async function loadData() {
     AppState.rawEvents = events;
   }
 
-  // Load journals
+  // Load journals in parallel
+  const journalPromises = [];
   for (const co of ['PO', 'TU', 'RA', 'MO']) {
     for (const yr of [2024, 2025]) {
-      const key = `${co}_${yr}`;
-      const data = await fetchJSON(`/api/journal/${co}/${yr}`);
-      if (data) AppState.journalData[key] = data;
+      journalPromises.push(
+        fetchJSON(`/api/journal/${co}/${yr}`).then(data => {
+          if (data) AppState.journalData[`${co}_${yr}`] = data;
+        })
+      );
     }
   }
+  await Promise.all(journalPromises);
 
   recomputeProjections();
   showToast(`${AppState.rawEvents.length} eventos cargados`, 'success');
