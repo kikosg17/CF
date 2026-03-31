@@ -90,13 +90,13 @@ export function renderCashflowTable(container, state) {
 
   function render() {
     const filtered = getFiltered();
-    const daily = getDailyAggregates(filtered, state.hypotheses.saldoInicial);
+    const daily = getDailyAggregates(filtered, state.hypotheses.saldoInicial, state.hypotheses.saldoInicialFecha);
 
     // Flatten daily into rows with running balance
     const rows = [];
     for (const day of daily) {
       for (const e of day.entries) {
-        rows.push({ ...e, saldo: day.saldo });
+        rows.push({ ...e, saldo: day.saldo, isProjected: day.isProjected });
       }
     }
 
@@ -106,7 +106,7 @@ export function renderCashflowTable(container, state) {
     const body = document.getElementById('cf-body');
     if (body) {
       body.innerHTML = page.map(e => `
-        <tr data-id="${e.id}" style="cursor:pointer">
+        <tr data-id="${e.id}" style="cursor:pointer;${e.isProjected === false ? 'opacity:0.4;' : ''}">
           <td>${formatDateShort(e.date)}</td>
           <td class="truncate" style="max-width:200px" title="${e.description}">
             <span style="color:${SUBTYPE_COLORS[e.subtype] || '#888'}">${SUBTYPE_LABELS[e.subtype] || e.subtype}</span>
@@ -151,7 +151,7 @@ export function renderCashflowTable(container, state) {
   // Export CSV
   document.getElementById('cf-export')?.addEventListener('click', () => {
     const filtered = getFiltered();
-    const daily = getDailyAggregates(filtered, state.hypotheses.saldoInicial);
+    const daily = getDailyAggregates(filtered, state.hypotheses.saldoInicial, state.hypotheses.saldoInicialFecha);
     const rows = [];
     for (const day of daily) {
       for (const e of day.entries) {

@@ -1,6 +1,7 @@
 export const DEFAULTS = {
-  // --- Saldo inicial ---
+  // --- Saldo inicial con fecha de referencia ---
   saldoInicial: 50000,
+  saldoInicialFecha: '2026-03-31',
 
   // --- PAX ratio ---
   paxRatio: 0.90,

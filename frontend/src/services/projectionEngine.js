@@ -160,9 +160,15 @@ export function runProjection(rawEvents, hypotheses) {
 
 /**
  * Aggregate entries by day with running balance.
+ * saldoInicialFecha: the date where the known balance applies.
+ * Days before that date are marked as historical (pre-reference).
+ * The running balance starts from saldoInicial at that date, going forward.
+ * Days before the reference date get a backward-calculated balance.
  */
-export function getDailyAggregates(entries, saldoInicial) {
+export function getDailyAggregates(entries, saldoInicial, saldoInicialFecha) {
   if (!entries.length) return [];
+  const refDate = saldoInicialFecha || toDateStr(new Date());
+
   const byDay = {};
   for (const e of entries) {
     if (!byDay[e.date]) {
@@ -174,13 +180,31 @@ export function getDailyAggregates(entries, saldoInicial) {
   }
 
   const days = Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date));
+
+  // Split into before and from reference date
+  const before = days.filter(d => d.date < refDate);
+  const fromRef = days.filter(d => d.date >= refDate);
+
+  // Forward pass from reference date
   let balance = saldoInicial || 0;
-  for (const day of days) {
+  for (const day of fromRef) {
     day.neto = day.income - day.cost;
     balance += day.neto;
     day.saldo = balance;
+    day.isProjected = true;
   }
-  return days;
+
+  // Backward pass for days before reference date
+  let backBalance = saldoInicial || 0;
+  for (let i = before.length - 1; i >= 0; i--) {
+    const day = before[i];
+    day.neto = day.income - day.cost;
+    backBalance -= day.neto; // reverse: subtract the net to go back
+    day.saldo = backBalance;
+    day.isProjected = false; // pre-reference = historical/estimated
+  }
+
+  return [...before, ...fromRef];
 }
 
 /**

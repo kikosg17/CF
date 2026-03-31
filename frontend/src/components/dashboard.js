@@ -137,7 +137,7 @@ function updateDashboard(state) {
     excludeInvestments: !includeInv,
   });
 
-  const dailyAgg = getDailyAggregates(filtered, hyp.saldoInicial);
+  const dailyAgg = getDailyAggregates(filtered, hyp.saldoInicial, hyp.saldoInicialFecha);
   const alerts = generateAlerts(dailyAgg, hyp);
 
   // KPIs
@@ -151,9 +151,9 @@ function updateDashboard(state) {
   if (kpiEl) {
     kpiEl.innerHTML = `
       <div class="kpi-card highlight">
-        <div class="kpi-label">Saldo Actual</div>
+        <div class="kpi-label">Saldo Conocido</div>
         <div class="kpi-value">${formatCurrencyShort(hyp.saldoInicial)}</div>
-        <div class="kpi-sub">Configurado en hipótesis</div>
+        <div class="kpi-sub">a ${formatDate(hyp.saldoInicialFecha || toDateStr(today()))}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Cobros Periodo</div>
@@ -246,6 +246,24 @@ function renderWaterfallChart(dailyAgg) {
   const costData = sampled.map(d => -d.cost);
   const balanceData = sampled.map(d => d.saldo);
 
+  // Per-bar colors: faded for pre-reference days, vivid for projected
+  const incomeColors = sampled.map(d => d.isProjected === false ? rgba('#22c55e', 0.2) : rgba('#22c55e', 0.7));
+  const costColors = sampled.map(d => d.isProjected === false ? rgba('#ef4444', 0.2) : rgba('#ef4444', 0.7));
+  const balanceColors = sampled.map(d => d.isProjected === false ? rgba('#3b82f6', 0.15) : '#3b82f6');
+  const balanceSegment = {
+    borderColor: ctx => {
+      const idx = ctx.p0DataIndex;
+      return sampled[idx] && sampled[idx].isProjected === false ? rgba('#3b82f6', 0.3) : '#3b82f6';
+    },
+    borderDash: ctx => {
+      const idx = ctx.p0DataIndex;
+      return sampled[idx] && sampled[idx].isProjected === false ? [4, 4] : [];
+    },
+  };
+
+  // Find the reference date index for the annotation
+  const refIdx = sampled.findIndex(d => d.isProjected === true);
+
   waterfallChart = new Chart(canvas, {
     type: 'bar',
     data: {
@@ -254,7 +272,7 @@ function renderWaterfallChart(dailyAgg) {
         {
           label: 'Cobros',
           data: incomeData,
-          backgroundColor: rgba('#22c55e', 0.7),
+          backgroundColor: incomeColors,
           stack: 'flow',
           yAxisID: 'y',
           order: 2,
@@ -262,7 +280,7 @@ function renderWaterfallChart(dailyAgg) {
         {
           label: 'Pagos',
           data: costData,
-          backgroundColor: rgba('#ef4444', 0.7),
+          backgroundColor: costColors,
           stack: 'flow',
           yAxisID: 'y',
           order: 2,
@@ -272,11 +290,15 @@ function renderWaterfallChart(dailyAgg) {
           data: balanceData,
           type: 'line',
           borderColor: '#3b82f6',
-          backgroundColor: rgba('#3b82f6', 0.1),
+          backgroundColor: rgba('#3b82f6', 0.08),
           fill: true,
           tension: 0.3,
-          pointRadius: 0,
+          pointRadius: sampled.map((d, i) => i === refIdx ? 6 : 0),
+          pointBackgroundColor: sampled.map((d, i) => i === refIdx ? '#3b82f6' : 'transparent'),
+          pointBorderColor: sampled.map((d, i) => i === refIdx ? '#fff' : 'transparent'),
+          pointBorderWidth: sampled.map((d, i) => i === refIdx ? 2 : 0),
           borderWidth: 2,
+          segment: balanceSegment,
           yAxisID: 'y2',
           order: 1,
         },
@@ -290,12 +312,29 @@ function renderWaterfallChart(dailyAgg) {
         legend: { labels: { color: '#9aa0b0', font: { size: 11 } } },
         tooltip: {
           callbacks: {
+            afterTitle: items => {
+              const idx = items[0]?.dataIndex;
+              if (idx !== undefined && sampled[idx] && sampled[idx].isProjected === false) {
+                return '(estimado - antes de fecha referencia)';
+              }
+              return '';
+            },
             label: ctx => `${ctx.dataset.label}: ${formatCurrencyShort(ctx.parsed.y)}`,
           },
         },
       },
       scales: {
-        x: { ticks: { color: '#6b7280', font: { size: 10 }, maxRotation: 45 }, grid: { color: 'rgba(42,45,58,0.5)' } },
+        x: {
+          ticks: {
+            color: (ctx) => {
+              const idx = ctx.index;
+              return sampled[idx] && sampled[idx].isProjected === false ? '#3a3d4a' : '#6b7280';
+            },
+            font: { size: 10 },
+            maxRotation: 45,
+          },
+          grid: { color: 'rgba(42,45,58,0.5)' },
+        },
         y: { position: 'left', ticks: { color: '#6b7280', callback: v => formatCurrencyCompact(v) }, grid: { color: 'rgba(42,45,58,0.5)' } },
         y2: { position: 'right', ticks: { color: '#3b82f6', callback: v => formatCurrencyCompact(v) }, grid: { display: false } },
       },

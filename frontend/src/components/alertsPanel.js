@@ -3,7 +3,7 @@ import { getDailyAggregates } from '../services/projectionEngine.js';
 import { formatDate } from '../utils/format.js';
 
 export function renderAlertsPanel(container, state) {
-  const dailyAgg = getDailyAggregates(state.projectedEntries || [], state.hypotheses.saldoInicial);
+  const dailyAgg = getDailyAggregates(state.projectedEntries || [], state.hypotheses.saldoInicial, state.hypotheses.saldoInicialFecha);
   const alerts = generateAlerts(dailyAgg, state.hypotheses);
 
   const bySeverity = {

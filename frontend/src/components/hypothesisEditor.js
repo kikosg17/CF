@@ -25,8 +25,13 @@ export function renderHypothesisEditor(container, state) {
     ${renderSection('general', 'Parámetros Generales', true, `
       <div class="hyp-grid">
         <div class="hyp-field">
-          <label>Saldo Inicial (EUR)</label>
+          <label>Saldo Conocido (EUR)</label>
           <input type="number" id="hyp-saldoInicial" value="${hyp.saldoInicial}">
+        </div>
+        <div class="hyp-field">
+          <label>Fecha del Saldo</label>
+          <input type="date" id="hyp-saldoInicialFecha" value="${hyp.saldoInicialFecha || ''}">
+          <small style="color:var(--text-muted);font-size:10px;">La proyección arranca desde este punto</small>
         </div>
         <div class="hyp-field">
           <label>Ratio PAX Efectivos / Contratados</label>
@@ -404,6 +409,7 @@ function bindHypothesisEvents(state) {
     if (el) el.addEventListener('change', () => { setter(el.value); save(); });
   };
   bindField('hyp-saldoInicial', v => hyp.saldoInicial = Number(v));
+  bindField('hyp-saldoInicialFecha', v => hyp.saldoInicialFecha = v);
   bindField('hyp-paxRatio', v => hyp.paxRatio = Number(v));
   bindField('hyp-horizonEnd', v => hyp.horizonEnd = v);
 
