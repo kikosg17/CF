@@ -27,7 +27,7 @@ export function buildHistoricalEntries(journalData) {
         company,
         source: 'ACTUAL',
         subcuenta: sub,
-        description: row.concepto || '',
+        description: row.concepto || row.descripcion || '',
       }));
     }
   }
