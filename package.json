@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "setup": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
     "backend": "node backend/server.js",
     "frontend": "cd frontend && npx vite --host 0.0.0.0"
