@@ -1,6 +1,6 @@
 import Chart from 'chart.js/auto';
 import { formatCurrencyShort, formatCurrencyCompact, formatDate, formatDateShort } from '../utils/format.js';
-import { today, toDateStr, addDays, getPeriodRange } from '../utils/dates.js';
+import { today, toDateStr, addDays, getPeriodRange, startOfWeek, endOfWeek, startOfLastWeek, endOfLastWeek, startOfNextWeek, endOfNextWeek, startOfMonth, endOfMonth, addMonths } from '../utils/dates.js';
 import { SUBTYPE_COLORS, SUBTYPE_LABELS, COMPANY_COLORS, COMPANY_NAMES, rgba } from '../utils/colors.js';
 import { filterEntries, getDailyAggregates } from '../services/projectionEngine.js';
 import { generateAlerts } from '../services/alertEngine.js';
@@ -27,10 +27,18 @@ export function renderDashboard(container, state) {
       <div class="filter-group">
         <label>Vista:</label>
         <select id="dash-view">
-          <option value="month">Mes actual</option>
-          <option value="quarter">Trimestre</option>
+          <option value="today">Hoy</option>
+          <option value="this_week">Esta semana</option>
+          <option value="last_week">Semana pasada</option>
+          <option value="next_week">Próxima semana</option>
+          <option value="this_month">Mes actual</option>
+          <option value="last_month">Mes pasado</option>
+          <option value="next_month">Próximo mes</option>
+          <option value="quarter">Trimestre actual</option>
+          <option value="30d">Próx. 30 días</option>
           <option value="90d" selected>Próx. 90 días</option>
-          <option value="year">Año</option>
+          <option value="year">Año actual</option>
+          <option value="all">Todo el horizonte</option>
           <option value="custom">Personalizado</option>
         </select>
       </div>
@@ -106,11 +114,19 @@ function bindDashFilters(state) {
     const now = today();
     let s, e;
     switch (view.value) {
-      case 'month': { const r = getPeriodRange('month', now); s = r.start; e = r.end; break; }
+      case 'today': { s = now; e = now; break; }
+      case 'this_week': { s = startOfWeek(now); e = endOfWeek(now); break; }
+      case 'last_week': { s = startOfLastWeek(now); e = endOfLastWeek(now); break; }
+      case 'next_week': { s = startOfNextWeek(now); e = endOfNextWeek(now); break; }
+      case 'this_month': { s = startOfMonth(now); e = endOfMonth(now); break; }
+      case 'last_month': { const pm = addMonths(now, -1); s = startOfMonth(pm); e = endOfMonth(pm); break; }
+      case 'next_month': { const nm = addMonths(now, 1); s = startOfMonth(nm); e = endOfMonth(nm); break; }
       case 'quarter': { const r = getPeriodRange('quarter', now); s = r.start; e = r.end; break; }
+      case '30d': { s = now; e = addDays(now, 30); break; }
       case '90d': { s = now; e = addDays(now, 90); break; }
       case 'year': { const r = getPeriodRange('year', now); s = r.start; e = r.end; break; }
-      default: return;
+      case 'all': { s = new Date(2022, 0, 1); e = new Date(state.hypotheses.horizonEnd || '2027-12-31'); break; }
+      default: return; // custom — don't change dates
     }
     if (start) start.value = toDateStr(s);
     if (end) end.value = toDateStr(e);

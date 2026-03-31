@@ -47,6 +47,31 @@ export function startOfWeek(d) {
   return r;
 }
 
+export function endOfWeek(d) {
+  const s = startOfWeek(d);
+  return addDays(s, 6);
+}
+
+/** Monday of previous week */
+export function startOfLastWeek(d) {
+  return addDays(startOfWeek(d), -7);
+}
+
+/** Sunday of previous week */
+export function endOfLastWeek(d) {
+  return addDays(startOfWeek(d), -1);
+}
+
+/** Monday of next week */
+export function startOfNextWeek(d) {
+  return addDays(startOfWeek(d), 7);
+}
+
+/** Sunday of next week */
+export function endOfNextWeek(d) {
+  return addDays(startOfWeek(d), 13);
+}
+
 export function startOfMonth(d) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
